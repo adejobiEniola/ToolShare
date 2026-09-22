@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ToolLocker — Workshop Tool Lending Tracker</title>
+<style>
+  :root {
+    --bg: #f4f1ea;
+    --card: #ffffff;
+    --ink: #1f2937;
+    --muted: #6b7280;
+    --accent: #b45309;
+    --accent-dark: #92400e;
+    --green: #047857;
+    --green-bg: #d1fae5;
+    --red: #b91c1c;
+    --red-bg: #fee2e2;
+    --amber-bg: #fef3c7;
+    --border: #e5e7eb;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--ink);
+  }
+  header {
+    background: #111827; color: #fff; padding: 14px 24px;
+    display: flex; justify-content: space-between; align-items: center;
+    position: sticky; top: 0; z-index: 10;
+  }
+  header h1 { margin: 0; font-size: 20px; letter-spacing: .3px; }
+  header h1 span { color: #fbbf24; }
+  header .userbox { display: flex; gap: 12px; align-items: center; font-size: 14px; }
+  button {
+    cursor: pointer; border: 0; border-radius: 8px; padding: 10px 16px;
+    font-weight: 600; font-size: 14px;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-dark); }
+  .btn-ghost { background: transparent; color: #fff; border: 1px solid #374151; }
+  .btn-secondary { background: #e5e7eb; color: var(--ink); }
+  .btn-danger { background: var(--red-bg); color: var(--red); }
+  .btn-success { background: var(--green); color: #fff; }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 16px 60px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  .hidden { display: none !important; }
+  /* Auth */
+  #auth-view { max-width: 420px; margin: 60px auto; }
+  #auth-view h2 { margin: 0 0 6px; }
+  #auth-view p.sub { color: var(--muted); margin: 0 0 18px; font-size: 14px; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+  .tabs button { flex: 1; background: #e5e7eb; }
+  .tabs button.active { background: #111827; color: #fff; }
+  label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 6px; }
+  input, select, textarea {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--border);
+    border-radius: 8px; font-size: 14px; background: #fff;
+  }
+  .link { background: none; color: var(--accent); padding: 4px 0; font-size: 13px; text-decoration: underline; }
+  /* Stats */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 18px 0; }
+  @media (max-width: 700px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+  .stat b { font-size: 26px; display: block; }
+  .stat span { font-size: 13px; color: var(--muted); }
+  /* Toolbar */
+  .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 16px 0; }
+  .toolbar input, .toolbar select { width: auto; min-width: 160px; flex: 1; }
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; }
+  .filters button { background: #e5e7eb; }
+  .filters button.active { background: #111827; color: #fff; }
+  /* Table / list */
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
+  tr.clickable { cursor: pointer; }
+  tr.clickable:hover { background: #fffbeb; }
+  .badge {
+    display: inline-block; padding: 4px 10px; border-radius: 999px;
+    font-size: 12px; font-weight: 700;
+  }
+  .badge.active { background: var(--amber-bg); color: #92400e; }
+  .badge.overdue { background: var(--red-bg); color: var(--red); }
+  .badge.returned { background: var(--green-bg); color: var(--green); }
+  /* Modal */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,.5);
+    display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50;
+  }
+  .modal { background: #fff; border-radius: 14px; padding: 24px; width: 100%; max-width: 520px; max-height: 90vh; overflow: auto; }
+  .modal h3 { margin-top: 0; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 520px) { .row { grid-template-columns: 1fr; } }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; flex-wrap: wrap; }
+  .detail-grid { display: grid; grid-template-columns: 140px 1fr; gap: 8px 12px; font-size: 14px; margin: 14px 0; }
+  .detail-grid dt { color: var(--muted); }
+  .detail-grid dd { margin: 0; font-weight: 600; }
+  .empty { text-align: center; color: var(--muted); padding: 30px 10px; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🧰 Tool<span>Locker</span></h1>
+  <div class="userbox">
+    <span id="header-user" class="hidden"></span>
+    <button id="btn-open-loan" class="btn-primary hidden">+ Lend a Tool</button>
+    <button id="btn-logout" class="btn-ghost hidden">Logout</button>
+  </div>
+</header>
+
+<main>
+  <!-- AUTH VIEW -->
+  <section id="auth-view" class="card">
+    <h2>Workshop login</h2>
+    <p class="sub">Single user per account. Tools are stored locally in this browser (demo, no server).</p>
+    <div class="tabs">
+      <button id="tab-login" class="active">Login</button>
+      <button id="tab-signup">Sign up</button>
+    </div>
+
+    <div id="form-login">
+      <label for="login-email">Email</label>
+      <input id="login-email" type="email" placeholder="david@workshop.ng" autocomplete="username" />
+      <label for="login-pass">Password</label>
+      <input id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password" />
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+        <button class="link" id="link-forgot">Forgot password?</button>
+        <button class="btn-primary" id="btn-login">Login → Dashboard</button>
+      </div>
+    </div>
+
+    <div id="form-signup" class="hidden">
+      <label for="signup-name">Workshop / Your name</label>
+      <input id="signup-name" placeholder="David — Carpentry Workshop" />
+      <label for="signup-email">Email</label>
+      <input id="signup-email" type="email" placeholder="david@workshop.ng" autocomplete="username" />
+      <label for="signup-pass">Password</label>
+      <input id="signup-pass" type="password" placeholder="Min. 4 characters" autocomplete="new-password" />
+      <div style="margin-top:14px;text-align:right">
+        <button class="btn-primary" id="btn-signup">Create account</button>
+      </div>
+    </div>
+
+    <div id="form-forgot" class="hidden">
+      <label for="forgot-email">Account email</label>
+      <input id="forgot-email" type="email" placeholder="david@workshop.ng" />
+      <div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn-secondary" id="btn-forgot-back">Back</button>
+        <button class="btn-primary" id="btn-forgot-send">Send reset link</button>
+      </div>
+      <p class="hint">Demo mode: password reset just shows a confirmation — no email / SMS / WhatsApp is sent (per spec: no reminder bot yet).</p>
+    </div>
+    <p id="auth-msg" class="hint"></p>
+  </section>
+
+  <!-- DASHBOARD VIEW -->
+  <section id="dash-view" class="hidden">
+    <div class="card">
+      <h2 style="margin:0" id="dash-title">Today's loans</h2>
+      <p class="sub" style="color:var(--muted);font-size:14px;margin:6px 0 0" id="dash-date"></p>
+      <div class="stats">
+        <div class="card stat"><b id="stat-active">0</b><span>Active loans</span></div>
+        <div class="card stat"><b id="stat-overdue">0</b><span>Overdue</span></div>
+        <div class="card stat"><b id="stat-returned">0</b><span>Returned</span></div>
+        <div class="card stat"><b id="stat-total">0</b><span>Total records</span></div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="filters">
+        <button data-filter="active" class="active">Active</button>
+        <button data-filter="overdue">Overdue</button>
+        <button data-filter="returned">Returned</button>
+        <button data-filter="all">All</button>
+      </div>
+      <input id="search" placeholder="Search tool / borrower / phone…" />
+      <select id="date-filter">
+        <option value="all">All dates</option>
+        <option value="today" selected>Loaned today</option>
+        <option value="week">Last 7 days</option>
+        <option value="overdue-only">Due today or earlier</option>
+      </select>
+    </div>
+
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr><th>Tool</th><th>Borrower</th><th>Contact</th><th>Return due</th><th>Status</th></tr>
+          </thead>
+          <tbody id="loan-rows"></tbody>
+        </table>
+      </div>
+      <div id="empty-state" class="empty hidden">No tools here. Click “+ Lend a Tool” to record a loan.<br/>e.g. Angle Grinder 1 → Apprentice Musa — 0803… — due Friday</div>
+    </div>
+    <p class="hint">Flow: login → dashboard (filter by date / status) → click a row for tool detail. Edit loans from the detail screen. “Mark Returned” closes the loan with one click.</p>
+  </section>
+</main>
+
+<!-- LOAN MODAL (add / edit) -->
+<div id="loan-modal" class="modal-backdrop hidden">
+  <div class="modal">
+    <h3 id="loan-modal-title">Lend a tool</h3>
+    <input type="hidden" id="loan-id" />
+    <label for="f-tool">Tool name *</label>
+    <input id="f-tool" placeholder="e.g. Angle Grinder 1, Circular Saw, Hammer Drill" />
+    <div class="row">
+      <div>
+        <label for="f-borrower">Borrower name *</label>
+        <input id="f-borrower" placeholder="e.g. Musa (apprentice)" />
+      </div>
+      <div>
+        <label for="f-contact">Borrower contact / phone *</label>
+        <input id="f-contact" placeholder="e.g. 0803 123 4567" />
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label for="f-loandate">Loan date</label>
+        <input id="f-loandate" type="date" />
+      </div>
+      <div>
+        <label for="f-returndate">Return due date *</label>
+        <input id="f-returndate" type="date" />
+      </div>
+    </div>
+    <label for="f-notes">Notes (optional)</label>
+    <textarea id="f-notes" rows="2" placeholder="Condition out, accessories included…"></textarea>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="btn-loan-cancel">Cancel</button>
+      <button class="btn-primary" id="btn-loan-save">Save loan</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div id="detail-modal" class="modal-backdrop hidden">
+  <div class="modal">
+    <h3 id="d-tool">Tool detail</h3>
+    <div><span id="d-status" class="badge active">Active</span></div>
+    <dl class="detail-grid">
+      <dt>Borrower</dt><dd id="d-borrower">—</dd>
+      <dt>Contact</dt><dd id="d-contact">—</dd>
+      <dt>Loaned on</dt><dd id="d-loandate">—</dd>
+      <dt>Return due</dt><dd id="d-returndate">—</dd>
+      <dt>Returned on</dt><dd id="d-returned">—</dd>
+      <dt>Notes</dt><dd id="d-notes">—</dd>
+    </dl>
+    <div class="modal-actions" style="justify-content:space-between">
+      <button class="btn-danger" id="btn-delete">Delete</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-secondary" id="btn-detail-close">Close</button>
+        <button class="btn-secondary" id="btn-edit">Edit</button>
+        <button class="btn-success" id="btn-returned">✓ Mark Returned</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const LS_USERS = 'toollocker_users';
+  const LS_SESSION = 'toollocker_session';
+  const LS_LOANS = 'toollocker_loans_';
+
+  const todayStr = () => new Date().toISOString().slice(0,10);
+  const getUsers = () => JSON.parse(localStorage.getItem(LS_USERS) || '{}');
+  const setUsers = u => localStorage.setItem(LS_USERS, JSON.stringify(u));
+  const session = () => localStorage.getItem(LS_SESSION);
+  const loansKey = () => LS_LOANS + session();
+  const getLoans = () => JSON.parse(localStorage.getItem(loansKey()) || '[]');
+  const setLoans = l => localStorage.setItem(loansKey(), JSON.stringify(l));
+
+  let activeFilter = 'active';
+  let currentDetailId = null;
+
+  function seedDemoIfEmpty(){
+    if (getLoans().length) return;
+    const t = todayStr();
+    const plus = n => { const d = new Date(); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); };
+    setLoans([
+      { id: crypto.randomUUID(), tool:'Angle Grinder 1', borrower:'Musa Bello', contact:'0803 111 2233', loanDate:t, returnDate:plus(2), returnedOn:null, notes:'With cutting disc + guard' },
+      { id: crypto.randomUUID(), tool:'Hammer Drill (Bosch)', borrower:'Neighbour — Chidi', contact:'0805 444 5566', loanDate:plus(-5), returnDate:plus(-1), returnedOn:null, notes:'Overdue — follow up' },
+      { id: crypto.randomUUID(), tool:'Circular Saw', borrower:'Ibrahim (apprentice)', contact:'0706 777 8899', loanDate:plus(-10), returnDate:plus(-6), returnedOn:plus(-5), notes:'Returned clean' }
+    ]);
+  }
+
+  function statusOf(loan){
+    if (loan.returnedOn) return 'returned';
+    return loan.returnDate < todayStr() ? 'overdue' : 'active';
+  }
+
+  // ---- Auth ----
+  function showAuthMsg(m){ $('auth-msg').textContent = m; }
+  function enterApp(email){
+    localStorage.setItem(LS_SESSION, email);
+    seedDemoIfEmpty();
+    render();
+  }
+  function exitApp(){
+    localStorage.removeItem(LS_SESSION);
+    render();
+  }
+
+  $('tab-login').onclick = () => {
+    $('tab-login').classList.add('active'); $('tab-signup').classList.remove('active');
+    $('form-login').classList.remove('hidden'); $('form-signup').classList.add('hidden'); $('form-forgot').classList.add('hidden');
+  };
+  $('tab-signup').onclick = () => {
+    $('tab-signup').classList.add('active'); $('tab-login').classList.remove('active');
+    $('form-signup').classList.remove('hidden'); $('form-login').classList.add('hidden'); $('form-forgot').classList.add('hidden');
+  };
+  $('link-forgot').onclick = () => {
+    $('form-login').classList.add('hidden'); $('form-forgot').classList.remove('hidden');
+  };
+  $('btn-forgot-back').onclick = () => {
+    $('form-forgot').classList.add('hidden'); $('form-login').classList.remove('hidden');
+  };
+  $('btn-forgot-send').onclick = () => {
+    const em = $('forgot-email').value.trim();
+    if (!em) return showAuthMsg('Enter your account email first.');
+    showAuthMsg('If an account exists for ' + em + ', a reset link would be sent. (Demo: use Sign up to create / reset locally.)');
+  };
+
+  $('btn-signup').onclick = () => {
+    const name = $('signup-name').value.trim(), email = $('signup-email').value.trim().toLowerCase(), pass = $('signup-pass').value;
+    if (!name || !email || pass.length < 4) return showAuthMsg('Fill name, valid email, and password (min 4 chars).');
+    const users = getUsers();
+    if (users[email]) return showAuthMsg('Account exists — please login.');
+    users[email] = { name, pass };
+    setUsers(users);
+    enterApp(email);
+  };
+  $('btn-login').onclick = () => {
+    const email = $('login-email').value.trim().toLowerCase(), pass = $('login-pass').value;
+    const users = getUsers();
+    if (!users[email] || users[email].pass !== pass) return showAuthMsg('Invalid email or password.');
+    enterApp(email);
+  };
+  $('btn-logout').onclick = exitApp;
+
+  // ---- Dashboard ----
+  function render(){
+    const em = session();
+    const loggedIn = !!em;
+    $('auth-view').classList.toggle('hidden', loggedIn);
+    $('dash-view').classList.toggle('hidden', !loggedIn);
+    $('btn-open-loan').classList.toggle('hidden', !loggedIn);
+    $('btn-logout').classList.toggle('hidden', !loggedIn);
+    if (!loggedIn) return;
+    const users = getUsers();
+    $('header-user').classList.remove('hidden');
+    $('header-user').textContent = users[em] ? users[em].name : em;
+    $('dash-date').textContent = new Date().toDateString() + ' — auto-loaded to today. Use filters to browse history.';
+    renderTable();
+  }
+
+  document.querySelectorAll('.filters button').forEach(b => {
+    b.onclick = () => {
+      document.querySelectorAll('.filters button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      activeFilter = b.dataset.filter;
+      renderTable();
+    };
+  });
+  $('search').oninput = renderTable;
+  $('date-filter').onchange = renderTable;
+
+  function renderTable(){
+    const loans = getLoans();
+    const q = $('search').value.trim().toLowerCase();
+    const df = $('date-filter').value;
+    const t = todayStr();
+    const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate()-7);
+    const weekAgoStr = weekAgo.toISOString().slice(0,10);
+
+    let rows = loans.map(l => ({...l, _st: statusOf(l)}));
+
+    // stats
+    $('stat-active').textContent = rows.filter(r=>r._st==='active').length;
+    $('stat-overdue').textContent = rows.filter(r=>r._st==='overdue').length;
+    $('stat-returned').textContent = rows.filter(r=>r._st==='returned').length;
+    $('stat-total').textContent = rows.length;
+
+    if (activeFilter !== 'all') rows = rows.filter(r => r._st === activeFilter);
+    if (q) rows = rows.filter(r => (r.tool+r.borrower+r.contact).toLowerCase().includes(q));
+    if (df === 'today') rows = rows.filter(r => r.loanDate === t);
+    if (df === 'week') rows = rows.filter(r => r.loanDate >= weekAgoStr);
+    if (df === 'overdue-only') rows = rows.filter(r => !r.returnedOn && r.returnDate <= t);
+
+    rows.sort((a,b) => a.returnDate.localeCompare(b.returnDate));
+
+    const tb = $('loan-rows');
+    tb.innerHTML = '';
+    $('empty-state').classList.toggle('hidden', rows.length > 0);
+    rows.forEach(r => {
+      const tr = document.createElement('tr');
+      tr.className = 'clickable';
+      tr.innerHTML = `<td><b></b></td><td></td><td></td><td></td><td><span class="badge ${r._st}">${r._st.toUpperCase()}</span></td>`;
+      tr.children[0].firstChild.textContent = r.tool;
+      tr.children[1].textContent = r.borrower;
+      tr.children[2].textContent = r.contact;
+      tr.children[3].textContent = r.returnDate;
+      tr.onclick = () => openDetail(r.id);
+      tb.appendChild(tr);
+    });
+  }
+
+  // ---- Loan modal ----
+  function openLoanModal(edit){
+    $('loan-modal').classList.remove('hidden');
+    if (edit) {
+      $('loan-modal-title').textContent = 'Edit loan';
+      $('loan-id').value = edit.id;
+      $('f-tool').value = edit.tool; $('f-borrower').value = edit.borrower;
+      $('f-contact').value = edit.contact; $('f-loandate').value = edit.loanDate;
+      $('f-returndate').value = edit.returnDate; $('f-notes').value = edit.notes || '';
+    } else {
+      $('loan-modal-title').textContent = 'Lend a tool';
+      $('loan-id').value = '';
+      $('f-tool').value = ''; $('f-borrower').value = ''; $('f-contact').value = '';
+      $('f-loandate').value = todayStr(); $('f-returndate').value = ''; $('f-notes').value = '';
+    }
+  }
+  $('btn-open-loan').onclick = () => openLoanModal(null);
+  $('btn-loan-cancel').onclick = () => $('loan-modal').classList.add('hidden');
+  $('btn-loan-save').onclick = () => {
+    const tool = $('f-tool').value.trim(), borrower = $('f-borrower').value.trim(),
+          contact = $('f-contact').value.trim(), loanDate = $('f-loandate').value || todayStr(),
+          returnDate = $('f-returndate').value, notes = $('f-notes').value.trim(),
+          id = $('loan-id').value;
+    if (!tool || !borrower || !contact || !returnDate) { alert('Tool, borrower, contact and return date are required.'); return; }
+    let loans = getLoans();
+    if (id) loans = loans.map(l => l.id === id ? {...l, tool, borrower, contact, loanDate, returnDate, notes} : l);
+    else loans.push({ id: crypto.randomUUID(), tool, borrower, contact, loanDate, returnDate, returnedOn: null, notes });
+    setLoans(loans);
+    $('loan-modal').classList.add('hidden');
+    renderTable();
+  };
+
+  // ---- Detail ----
+  function openDetail(id){
+    const l = getLoans().find(x => x.id === id);
+    if (!l) return;
+    currentDetailId = id;
+    const st = statusOf(l);
+    $('d-tool').textContent = l.tool;
+    $('d-status').textContent = st.toUpperCase();
+    $('d-status').className = 'badge ' + st;
+    $('d-borrower').textContent = l.borrower;
+    $('d-contact').textContent = l.contact;
+    $('d-loandate').textContent = l.loanDate;
+    $('d-returndate').textContent = l.returnDate;
+    $('d-returned').textContent = l.returnedOn || '— not yet —';
+    $('d-notes').textContent = l.notes || '—';
+    $('btn-returned').style.display = l.returnedOn ? 'none' : '';
+    $('detail-modal').classList.remove('hidden');
+  }
+  $('btn-detail-close').onclick = () => $('detail-modal').classList.add('hidden');
+  $('btn-edit').onclick = () => {
+    const l = getLoans().find(x => x.id === currentDetailId);
+    $('detail-modal').classList.add('hidden');
+    openLoanModal(l);
+  };
+  $('btn-returned').onclick = () => {
+    setLoans(getLoans().map(l => l.id === currentDetailId ? {...l, returnedOn: todayStr()} : l));
+    $('detail-modal').classList.add('hidden');
+    renderTable();
+  };
+  $('btn-delete').onclick = () => {
+    if (!confirm('Delete this record?')) return;
+    setLoans(getLoans().filter(l => l.id !== currentDetailId));
+    $('detail-modal').classList.add('hidden');
+    renderTable();
+  };
+
+  render();
+})();
+</script>
+</body>
+</html>
